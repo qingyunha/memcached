@@ -421,12 +421,28 @@ void conn_shrink(conn *c) {
     }
 }
 
+
+
+char *str_state(int state){
+    static char *states[] = {
+        "conn_listening",
+        "conn_read",
+        "conn_write",
+        "conn_nread",
+        "conn_swallow",
+        "conn_closing",
+        "conn_nwrite"
+    };
+    return states[state];
+}
+
 /*
  * Sets a connection's current state in the state machine. Any special
  * processing that needs to happen on certain state transitions can
  * happen here.
  */
 void conn_set_state(conn *c, int state) {
+    fprintf(stderr, "<%d change state %s to %s\n", c->sfd, str_state(c->state), str_state(state));
     if (state != c->state) {
         if (state == conn_read) {
             conn_shrink(c);
@@ -1414,12 +1430,15 @@ void drive_machine(conn *c) {
     int res;
 
     while (!exit) {
+        fprintf(stderr, "<%d enter drive_machine loop(%s)\n", c->sfd, str_state(c->state));
         switch(c->state) {
         case conn_listening:
             addrlen = sizeof(addr);
             if ((sfd = accept(c->sfd, &addr, &addrlen)) == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     exit = 1;
+                    fprintf(stderr, "<%d accept error: ", c->sfd);
+                    perror(NULL);
                     break;
                 } else {
                     perror("accept()");
@@ -1444,12 +1463,19 @@ void drive_machine(conn *c) {
             break;
 
         case conn_read:
+            fprintf(stderr, "<%d try_read_command... \n", c->sfd);
             if (try_read_command(c)) {
+                fprintf(stderr, "<%d try_read_command success\n", c->sfd);
                 continue;
             }
+
+            fprintf(stderr, "<%d try_read_network...\n", c->sfd);
             if (c->udp ? try_read_udp(c) : try_read_network(c)) {
+                fprintf(stderr, "<%d try_read_network success\n", c->sfd);
                 continue;
             }
+            
+            fprintf(stderr, "<%d update_event...\n", c->sfd);
             /* we have no command line and no data to read from network */
             if (!update_event(c, EV_READ | EV_PERSIST)) {
                 if (settings.verbose > 0)

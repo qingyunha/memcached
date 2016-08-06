@@ -431,7 +431,7 @@ char *str_state(int state){
         "conn_nread",
         "conn_swallow",
         "conn_closing",
-        "conn_nwrite"
+        "conn_mwrite"
     };
     return states[state];
 }
@@ -1357,6 +1357,17 @@ int update_event(conn *c, int new_flags) {
     return 1;
 }
 
+
+char *str_transmit(int t) {
+    static char *transmit[] = {
+        "all done writing",
+        "More date remaining to write",
+        "Can't write any more right now",
+        "Can't write"
+    };
+    
+    return transmit[t];
+}
 /*
  * Transmit the next chunk of data from our list of msgbuf structures.
  *
@@ -1428,6 +1439,7 @@ void drive_machine(conn *c) {
     struct sockaddr addr;
     conn *newc;
     int res;
+    int t;
 
     while (!exit) {
         fprintf(stderr, "<%d enter drive_machine loop(%s)\n", c->sfd, str_state(c->state));
@@ -1489,6 +1501,7 @@ void drive_machine(conn *c) {
         case conn_nread:
             /* we are reading rlbytes into ritem; */
             if (c->rlbytes == 0) {
+                fprintf(stderr, "<%d complete_nread...\n", c->sfd);
                 complete_nread(c);
                 break;
             }
@@ -1503,6 +1516,7 @@ void drive_machine(conn *c) {
                 break;
             }
 
+            fprintf(stderr, "<%d try reading from socket\n", c->sfd);
             /*  now try reading from the socket */
             res = read(c->sfd, c->ritem, c->rlbytes);
             if (res > 0) {
@@ -1516,6 +1530,7 @@ void drive_machine(conn *c) {
                 break;
             }
             if (res == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+                fprintf(stderr, "<%d update_event\n", c->sfd);
                 if (!update_event(c, EV_READ | EV_PERSIST)) {
                     if (settings.verbose > 0)
                         fprintf(stderr, "Couldn't update event\n");
@@ -1593,7 +1608,10 @@ void drive_machine(conn *c) {
             /* fall through... */
 
         case conn_mwrite:
-            switch (transmit(c)) {
+
+            t = transmit(c);
+            fprintf(stderr, "<%d transmit(%s): %s \n", c->sfd, str_state(c->state), str_transmit(t));
+            switch (t) {
             case TRANSMIT_COMPLETE:
                 if (c->state == conn_mwrite) {
                     while (c->ileft > 0) {

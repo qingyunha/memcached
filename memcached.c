@@ -1442,7 +1442,8 @@ void drive_machine(conn *c) {
     int t;
 
     while (!exit) {
-        fprintf(stderr, "<%d enter drive_machine loop(%s)\n", c->sfd, str_state(c->state));
+        fprintf(stderr, "\n<%d enter drive_machine loop(%s)\n", c->sfd, str_state(c->state));
+        print_conn(c);
         switch(c->state) {
         case conn_listening:
             addrlen = sizeof(addr);

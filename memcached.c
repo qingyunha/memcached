@@ -1244,7 +1244,9 @@ int try_read_command(conn *c) {
     }
     *el = '\0';
 
+    fprintf(stderr, "process command...\n");
     process_command(c, c->rcurr);
+    fprintf(stderr, "process command complete\n");
 
     c->rbytes -= (cont - c->rcurr);
     c->rcurr = cont;
@@ -1378,6 +1380,7 @@ char *str_transmit(int t) {
  *   TRANSMIT_HARD_ERROR Can't write (c->state is set to conn_closing)
  */
 int transmit(conn *c) {
+    print_msg_info(c);
     int res;
 
     if (c->msgcurr < c->msgused &&

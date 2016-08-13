@@ -646,6 +646,8 @@ void complete_nread(conn *c) {
     else
         item_link(it);
 
+    print_item(it);
+
     c->item = 0;
     out_string(c, "STORED");
     return;
@@ -992,6 +994,7 @@ void process_command(conn *c, char *command) {
             stats.get_cmds++;
             it = get_item(key);
             if (it) {
+                print_item(it);
                 if (i >= c->isize) {
                     item **new_list = realloc(c->ilist, sizeof(item *)*c->isize*2);
                     if (new_list) {

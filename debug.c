@@ -43,3 +43,15 @@ void print_msg_info(conn *c) {
             c->msgsize, c->msgused, c->msgcurr, c->msgbytes);
 
 }
+
+
+void print_item(item *it){
+
+    char *key = ITEM_key(it);
+    long int hv =  hash(key, strlen(key), 0);
+
+    fprintf(stderr, "\n%ld, access time: %d exptime: %d\n", hv, it->time, it->exptime);
+    fprintf(stderr, "key: %s\n", ITEM_key(it));
+    //fprintf(stderr, "suffix: %s\n", ITEM_suffix(it));
+    write(1, ITEM_data(it), it->nbytes);
+}
